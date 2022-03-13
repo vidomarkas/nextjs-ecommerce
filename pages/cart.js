@@ -14,20 +14,42 @@ import {
 	Card,
 	List,
 	ListItem,
+	Icon,
+	IconButton,
 } from "@mui/material";
 import React, { useContext } from "react";
 import Layout from "../components/Layout";
 import { Store } from "../utils/store";
 import NextLink from "next/link";
 import Image from "next/image";
+import dynamic from "next/dynamic";
+import axios from "axios";
+import DeleteIcon from "@mui/icons-material/Delete";
 
-export default function Cart() {
-	const { state } = useContext(Store);
+function Cart() {
+	const { state, dispatch } = useContext(Store);
 	const {
 		cart: { cartItems },
 	} = state;
 
-	console.log("cartItems :>> ", cartItems);
+	const updateCartHandler = async (item, quantity) => {
+		const { data } = await axios.get(`/api/products/${item._id}`);
+		if (data.countInStock < quantity) {
+			window.alert("Product is is out of stock");
+		}
+		dispatch({
+			type: "CART_ADD_ITEM",
+			payload: { ...item, quantity },
+		});
+	};
+
+	const removeItemHandler = async (itemID) => {
+		dispatch({
+			type: "CART_REMOVE_ITEM",
+			payload: itemID,
+		});
+	};
+
 	return (
 		<Layout title="Shopping Cart">
 			<Typography component="h1" variant="h1">
@@ -35,7 +57,10 @@ export default function Cart() {
 			</Typography>
 			{cartItems.length === 0 ? (
 				<div>
-					Cart is empty <NextLink href="/">Go shopping</NextLink>
+					Your cart is empty.{" "}
+					<NextLink href="/" passHref>
+						<Link>Go shopping</Link>
+					</NextLink>
 				</div>
 			) : (
 				<Grid container spacing={4}>
@@ -91,6 +116,12 @@ export default function Cart() {
 												<TableCell align="right">
 													<Select
 														value={item.quantity}
+														onChange={(e) => {
+															updateCartHandler(
+																item,
+																e.target.value
+															);
+														}}
 													>
 														{[
 															...Array(
@@ -110,12 +141,19 @@ export default function Cart() {
 													£{item.price}
 												</TableCell>
 												<TableCell align="right">
-													<Button
+													<IconButton
+														onClick={() =>
+															removeItemHandler(
+																item._id
+															)
+														}
 														variant="contained"
 														color="secondary"
 													>
-														X
-													</Button>
+														<Icon>
+															<DeleteIcon />
+														</Icon>
+													</IconButton>
 												</TableCell>
 											</TableRow>
 										);
@@ -167,3 +205,5 @@ export default function Cart() {
 		</Layout>
 	);
 }
+
+export default dynamic(() => Promise.resolve(Cart), { ssr: false });
